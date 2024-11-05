@@ -15,7 +15,9 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.math.BigDecimal;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -25,7 +27,8 @@ import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @TestPropertySource(properties = {
-        "spring.jpa.show-sql=true"
+        "spring.jpa.show-sql=true",
+        "spring.jpa.hibernate.ddl-auto=create-drop"
 })
 class EmployeeRepositoryTest {
     // Define the PostgreSQL container with Testcontainers
@@ -54,7 +57,7 @@ class EmployeeRepositoryTest {
     @Test
     @Transactional
     public void testSaveOrUpdateCreatesNewActiveRecord() {
-        // Step 1: Create a new employee (initial insertion)
+        // Create a new employee (initial insertion)
         Employee employee = new Employee();
         employee.setName("John Doe");
         employee.setEmployeeId("abcdef");
@@ -63,7 +66,7 @@ class EmployeeRepositoryTest {
         employeeRepository.saveOrUpdate(employee);
 
         // Verify the employee was saved and is active
-        Optional<Employee> activeEmployeeOpt = employeeRepository.findActiveByIdentifier("abcdef");
+        Optional<Employee> activeEmployeeOpt = employeeRepository.findActiveByIdentifier(Map.of("employeeId", "abcdef"), Set.of("employeeId"));
         assertTrue(activeEmployeeOpt.isPresent(), "Expected an active employee record");
         Employee activeEmployee = activeEmployeeOpt.get();
         assertEquals("John Doe", activeEmployee.getName());
@@ -71,21 +74,21 @@ class EmployeeRepositoryTest {
         assertEquals(BigDecimal.ONE, activeEmployee.getSalary());
         assertTrue(activeEmployee.isActive());
 
-        // Step 2: Update the employee (should trigger SCD Type 2 behavior)
+        // Update the employee (should trigger SCD Type 2 behavior)
         Employee updatedEmployee = new Employee();
         updatedEmployee.setName("John Doe");
         updatedEmployee.setEmployeeId("abcdef");
         updatedEmployee.setSalary(BigDecimal.TEN);
         employeeRepository.saveOrUpdate(updatedEmployee);
 
-        // Step 3: Verify that the old record is inactive and the new record is active
+        // Verify that the old record is inactive and the new record is active
         Optional<Employee> previousEmployeeOpt = employeeRepository.findById(activeEmployee.getId());
         assertTrue(previousEmployeeOpt.isPresent());
         Employee previousEmployee = previousEmployeeOpt.get();
         assertFalse(previousEmployee.isActive(), "The previous record should be inactive");
 
         // Verify the new active record
-        Optional<Employee> newActiveEmployeeOpt = employeeRepository.findActiveByIdentifier("John Doe");
+        Optional<Employee> newActiveEmployeeOpt = employeeRepository.findActiveByIdentifier(Map.of("employeeId", "abcdef"), Set.of("employeeId"));
         assertTrue(newActiveEmployeeOpt.isPresent(), "Expected a new active employee record");
         Employee newActiveEmployee = newActiveEmployeeOpt.get();
         assertEquals("abcdef", newActiveEmployee.getEmployeeId());
@@ -93,7 +96,7 @@ class EmployeeRepositoryTest {
         assertTrue(newActiveEmployee.isActive());
         assertNotEquals(activeEmployee.getId(), newActiveEmployee.getId(), "The new record should have a different ID");
 
-        // Step 4: Verify only one active record exists for this business key
+        // Verify only one active record exists for this business key
         long activeCount = employeeRepository.findAll().stream().filter(Employee::isActive).count();
         assertEquals(1, activeCount, "Only one active record should exist for the employee");
     }

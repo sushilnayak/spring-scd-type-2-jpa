@@ -5,11 +5,13 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.Map;
+import java.util.Set;
 
 @Getter
 @Setter
 @MappedSuperclass
-public abstract class SCDType2Entity<K> {
+public abstract class SCDType2Entity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -24,7 +26,9 @@ public abstract class SCDType2Entity<K> {
     @Column(nullable = false)
     private boolean active;
 
-    public abstract K getBusinessKey();
+    public abstract Map<String, Object> getBusinessKey();     // Returns a map of field names to values for composite keys
+
+    public abstract Set<String> getBusinessKeyFieldNames();   // Returns the names of the fields in the business key
 
     @PrePersist
     public void prePersist() {
