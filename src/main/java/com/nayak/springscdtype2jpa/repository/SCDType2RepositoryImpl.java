@@ -45,7 +45,7 @@ public class SCDType2RepositoryImpl<T extends SCDType2Entity, K>
 
     @Override
     public Optional<T> findActiveByIdentifier(Map<String, Object> businessKey, Set<String> businessKeyFieldNames) {
-        // Build a dynamic JPQL query with multiple conditions for composite keys
+        // Dynamic JPQL query with multiple conditions for composite keys
         String baseQuery = "SELECT e FROM " + getDomainClass().getSimpleName() + " e WHERE e.active = true";
         StringJoiner keyConditions = new StringJoiner(" AND ");
 
